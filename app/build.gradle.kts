@@ -12,8 +12,8 @@ android {
         applicationId = "com.alwansan.c_app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1769881797
-        versionName = "1.0.1769881797"
+        versionCode = 1769882326
+        versionName = "1.0.1769882326"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

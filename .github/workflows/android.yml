@@ -16,13 +16,11 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # هذا السطر يثبت Gradle في السيرفر بدلاً من استخدام الملف المفقود
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.5'
 
-    # نستخدم أمر gradle مباشرة بدلاً من ./gradlew
     - name: Build APK
       run: gradle assembleDebug
 

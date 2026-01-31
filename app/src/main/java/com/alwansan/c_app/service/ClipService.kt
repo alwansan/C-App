@@ -5,7 +5,6 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import com.alwansan.c_app.MainActivity
-import com.alwansan.c_app.R
 import com.alwansan.c_app.data.AppDatabase
 import com.alwansan.c_app.data.Clip
 class ClipService : Service(), ClipboardManager.OnPrimaryClipChangedListener {

@@ -2,7 +2,7 @@ import os
 import subprocess
 import time
 
-# --- C APP FINAL BUILDER (NO GRADLEW REQUIRED) ---
+# --- C APP FINAL BUILDER (FIXED) ---
 
 GITHUB_REPO = "https://github.com/alwansan/C-App.git"
 PACKAGE_NAME = "com.alwansan.c_app"
@@ -17,18 +17,18 @@ def run_command(command):
         print(f"ℹ️ Info/Error: {result.stderr.strip()}")
         return False
 
-def write_file(path, content):
+def write(path, content):
     parent = os.path.dirname(path)
-    if parent:
+    if parent:  # إذا فيه فولدر نسويه
         os.makedirs(parent, exist_ok=True)
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(content.strip())
-    print(f"📄 Generated: {path}")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content.strip() + "\n")
+    print(f"📄 {path}")
 
-print("🛠️ Building App Structure...")
+print("🛠️ Building project...")
 
-# 1. ROOT build.gradle.kts
-write_file("build.gradle.kts", """
+# --- ROOT FILES ---
+write("build.gradle.kts", """
 plugins {
     id("com.android.application") version "8.2.0" apply false
     id("org.jetbrains.kotlin.android") version "1.9.20" apply false
@@ -36,8 +36,7 @@ plugins {
 }
 """)
 
-# 2. SETTINGS.gradle.kts
-write_file("settings.gradle.kts", """
+write("settings.gradle.kts", """
 pluginManagement {
     repositories {
         google()
@@ -56,9 +55,9 @@ rootProject.name = "C-App"
 include(":app")
 """)
 
-# 3. APP build.gradle.kts (تحديث تلقائي للإصدار)
 current_time = int(time.time())
-write_file("app/build.gradle.kts", f"""
+
+write("app/build.gradle.kts", f"""
 plugins {{
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -106,16 +105,14 @@ dependencies {{
 }}
 """)
 
-# 4. gradle.properties
-write_file("gradle.properties", """
+write("gradle.properties", """
 org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
 android.useAndroidX=true
 android.enableJetifier=true
 """)
 
-# 5. GitHub Workflow (الحل السحري هنا)
-# قمنا بإزالة الاعتماد على ./gradlew واستخدمنا gradle مباشرة
-write_file(".github/workflows/android.yml", """
+# --- GITHUB WORKFLOW ---
+write(".github/workflows/android.yml", """
 name: Android CI
 
 on:
@@ -134,13 +131,11 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # هذا السطر يثبت Gradle في السيرفر بدلاً من استخدام الملف المفقود
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.5'
 
-    # نستخدم أمر gradle مباشرة بدلاً من ./gradlew
     - name: Build APK
       run: gradle assembleDebug
 
@@ -151,8 +146,8 @@ jobs:
         path: app/build/outputs/apk/debug/app-debug.apk
 """)
 
-# 6. Database Code
-write_file(f"app/src/main/java/{PACKAGE_NAME.replace('.', '/')}/data/Database.kt", f"""
+# --- DATABASE ---
+write(f"app/src/main/java/{PACKAGE_NAME.replace('.', '/')}/data/Database.kt", f"""
 package {PACKAGE_NAME}.data
 import android.content.Context
 import androidx.room.*
@@ -176,8 +171,8 @@ data class Clip(@PrimaryKey(autoGenerate = true) val id: Long = 0, val content: 
 }}
 """)
 
-# 7. Background Service
-write_file(f"app/src/main/java/{PACKAGE_NAME.replace('.', '/')}/service/ClipService.kt", f"""
+# --- SERVICES & MAIN ACTIVITY ---
+write(f"app/src/main/java/{PACKAGE_NAME.replace('.', '/')}/service/ClipService.kt", f"""
 package {PACKAGE_NAME}.service
 import android.app.*
 import android.content.*
@@ -185,7 +180,6 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import {PACKAGE_NAME}.MainActivity
-import {PACKAGE_NAME}.R
 import {PACKAGE_NAME}.data.AppDatabase
 import {PACKAGE_NAME}.data.Clip
 class ClipService : Service(), ClipboardManager.OnPrimaryClipChangedListener {{
@@ -205,8 +199,7 @@ class ClipService : Service(), ClipboardManager.OnPrimaryClipChangedListener {{
 }}
 """)
 
-# 8. Boot Receiver
-write_file(f"app/src/main/java/{PACKAGE_NAME.replace('.', '/')}/service/BootReceiver.kt", f"""
+write(f"app/src/main/java/{PACKAGE_NAME.replace('.', '/')}/service/BootReceiver.kt", f"""
 package {PACKAGE_NAME}.service
 import android.content.BroadcastReceiver; import android.content.Context; import android.content.Intent
 class BootReceiver : BroadcastReceiver() {{
@@ -214,8 +207,7 @@ class BootReceiver : BroadcastReceiver() {{
 }}
 """)
 
-# 9. Main Activity
-write_file(f"app/src/main/java/{PACKAGE_NAME.replace('.', '/')}/MainActivity.kt", f"""
+write(f"app/src/main/java/{PACKAGE_NAME.replace('.', '/')}/MainActivity.kt", f"""
 package {PACKAGE_NAME}
 import android.content.*; import android.os.Bundle; import android.view.*; import android.widget.*
 import androidx.appcompat.app.AlertDialog; androidx.appcompat.app.AppCompatActivity; androidx.core.widget.addTextChangedListener
@@ -244,16 +236,16 @@ class CAdapter(val onClick: (Clip)->Unit, val onLong: (Clip)->Unit) : RecyclerVi
 }}
 """)
 
-# 10. Layouts & Manifest
-write_file("app/src/main/res/layout/activity_main.xml", """<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="#000000" android:padding="10dp"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"><Button android:id="@+id/btnFolder" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Inbox" /><EditText android:id="@+id/etSearch" android:layout_width="match_parent" android:layout_height="50dp" android:hint="Search..." android:textColor="#FFF" android:textColorHint="#555" android:background="#222" /></LinearLayout><androidx.recyclerview.widget.RecyclerView android:id="@+id/rvClips" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_marginTop="10dp"/></LinearLayout>""")
-write_file("app/src/main/res/layout/item_c.xml", """<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="15dp" android:layout_margin="2dp" android:background="#1A1A1A"><TextView android:id="@+id/tvTxt" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:textColor="#EEE" android:maxLines="3"/><ImageView android:id="@+id/ivPin" android:layout_width="20dp" android:layout_height="20dp" android:src="@android:drawable/btn_star_big_on" android:visibility="gone"/></LinearLayout>""")
-write_file("app/src/main/res/values/strings.xml", """<resources><string name="app_name">C</string></resources>""")
-write_file("app/src/main/AndroidManifest.xml", """<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-permission android:name="android.permission.FOREGROUND_SERVICE" /><uses-permission android:name="android.permission.POST_NOTIFICATIONS" /><uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /><uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/><uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" /><application android:name=".CApp" android:label="C" android:theme="@style/Theme.AppCompat.NoActionBar"><activity android:name=".MainActivity" android:exported="true" android:windowSoftInputMode="adjustResize"><intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter></activity><service android:name=".service.ClipService" android:foregroundServiceType="dataSync" /><receiver android:name=".service.BootReceiver" android:exported="true"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/></intent-filter></receiver></application></manifest>""")
+# --- Layouts & Manifest ---
+write("app/src/main/res/layout/activity_main.xml", """<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="#000000" android:padding="10dp"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"><Button android:id="@+id/btnFolder" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Inbox" /><EditText android:id="@+id/etSearch" android:layout_width="match_parent" android:layout_height="50dp" android:hint="Search..." android:textColor="#FFF" android:textColorHint="#555" android:background="#222" /></LinearLayout><androidx.recyclerview.widget.RecyclerView android:id="@+id/rvClips" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_marginTop="10dp"/></LinearLayout>""")
+write("app/src/main/res/layout/item_c.xml", """<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="15dp" android:layout_margin="2dp" android:background="#1A1A1A"><TextView android:id="@+id/tvTxt" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:textColor="#EEE" android:maxLines="3"/><ImageView android:id="@+id/ivPin" android:layout_width="20dp" android:layout_height="20dp" android:src="@android:drawable/btn_star_big_on" android:visibility="gone"/></LinearLayout>""")
+write("app/src/main/res/values/strings.xml", """<resources><string name="app_name">C</string></resources>""")
+write("app/src/main/AndroidManifest.xml", f"""<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-permission android:name="android.permission.FOREGROUND_SERVICE" /><uses-permission android:name="android.permission.POST_NOTIFICATIONS" /><uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /><uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/><uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" /><application android:name=".CApp" android:label="C" android:theme="@style/Theme.AppCompat.NoActionBar"><activity android:name=".MainActivity" android:exported="true" android:windowSoftInputMode="adjustResize"><intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter></activity><service android:name=".service.ClipService" android:foregroundServiceType="dataSync" /><receiver android:name=".service.BootReceiver" android:exported="true"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED"/></intent-filter></receiver></application></manifest>""")
 
 print("✅ File Generation Complete.")
 
-# --- SMART GIT LOGIC ---
-print("\n🔄 Starting Smart Git Process...")
+# --- GIT ---
+print("\n🔄 Starting Git Process...")
 
 current_dir = os.getcwd()
 run_command(f'git config --global --add safe.directory "{current_dir}"')
